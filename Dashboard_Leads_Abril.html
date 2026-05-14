@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Leads — Abril 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1f2436;
+    --border: #2a3045;
+    --nit: #3b82f6;
+    --nit-dim: rgba(59,130,246,.15);
+    --sg: #f59e0b;
+    --sg-dim: rgba(245,158,11,.15);
+    --accent: #22d3ee;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --success: #34d399;
+    --danger: #f87171;
+    --warn: #fbbf24;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #0f1117 0%, #1a1f35 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .header-left h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .header-left span { color: var(--accent); }
+  .header-left p { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+  
+  .team-switcher {
+    display: flex;
+    gap: 8px;
+    background: var(--surface2);
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .team-btn {
+    padding: 8px 20px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .team-btn.active-nit { background: var(--nit); color: #fff; }
+  .team-btn.active-sg  { background: var(--sg); color: #0f1117; }
+  .team-btn:hover:not(.active-nit):not(.active-sg) { background: var(--surface); color: var(--text); }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .tab {
+    padding: 14px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .2s;
+    margin-bottom: -1px;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* ── MAIN ── */
+  main { padding: 28px 32px; }
+
+  /* ── KPI CARDS ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi.blue::before { background: var(--nit); }
+  .kpi.amber::before { background: var(--sg); }
+  .kpi.green::before { background: var(--success); }
+  .kpi.cyan::before { background: var(--accent); }
+  .kpi-label { font-size: .75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+  .kpi-value { font-size: 1.8rem; font-weight: 700; font-family: 'DM Mono', monospace; }
+  .kpi-value.blue { color: var(--nit); }
+  .kpi-value.amber { color: var(--sg); }
+  .kpi-value.green { color: var(--success); }
+  .kpi-value.cyan { color: var(--accent); }
+  .kpi-sub { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+
+  /* ── CHARTS ROW ── */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card-title {
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    margin-bottom: 16px;
+  }
+  .chart-wrap { position: relative; height: 240px; }
+
+  /* ── CORRETOR SELECTOR ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .section-title { font-size: 1.1rem; font-weight: 600; }
+
+  select, input[type=text] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .875rem;
+    padding: 8px 14px;
+    outline: none;
+    transition: border-color .2s;
+    min-width: 200px;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+
+  /* ── CORRETOR CARD ── */
+  .corretor-overview {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 900px) { .corretor-overview { grid-template-columns: 1fr; } }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); }
+  th {
+    padding: 12px 16px;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  th:hover { color: var(--text); }
+  td {
+    padding: 12px 16px;
+    font-size: .8rem;
+    border-top: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tr:hover td { background: var(--surface2); }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-neg  { background: rgba(34,211,238,.15); color: var(--accent); }
+  .badge-arq  { background: rgba(100,116,139,.15); color: var(--muted); }
+  .badge-fech { background: rgba(52,211,153,.15); color: var(--success); }
+  .badge-novo { background: rgba(251,191,36,.15); color: var(--warn); }
+
+  .price-cell { font-family: 'DM Mono', monospace; font-size: .78rem; }
+
+  /* ── PAGINATION ── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    font-size: .8rem;
+    color: var(--muted);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .page-btns { display: flex; gap: 6px; }
+  .pg-btn {
+    width: 32px; height: 32px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: .8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+  }
+  .pg-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .pg-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .pg-btn:disabled { opacity: .35; cursor: default; }
+
+  /* ── PORTAIS ── */
+  .portais-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .portal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: border-color .2s;
+  }
+  .portal-card:hover { border-color: var(--accent); }
+  .portal-name {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .portal-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .portal-stats { display: flex; flex-direction: column; gap: 10px; }
+  .portal-stat { display: flex; justify-content: space-between; align-items: center; }
+  .portal-stat-label { font-size: .78rem; color: var(--muted); }
+  .portal-stat-value { font-family: 'DM Mono', monospace; font-size: .85rem; font-weight: 600; }
+
+  .portal-bar-wrap { margin-top: 12px; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .portal-bar { height: 100%; border-radius: 2px; }
+
+  /* ── HIDDEN ── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .no-data {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: .9rem;
+  }
+
+  /* ── CORRETORES LIST ── */
+  .corr-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .corr-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .corr-item:hover, .corr-item.selected { border-color: var(--accent); background: rgba(34,211,238,.08); }
+  .corr-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: .85rem;
+    flex-shrink: 0;
+  }
+  .corr-info { min-width: 0; }
+  .corr-name { font-size: .85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .corr-count { font-size: .75rem; color: var(--muted); }
+
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  .search-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-row input { flex: 1; min-width: 200px; }
+  .search-row select { min-width: 160px; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <h1>Dashboard de <span>Leads</span></h1>
+    <p>Abril 2026 · 500 leads · Atualizado automaticamente</p>
+  </div>
+  <div class="team-switcher">
+    <button class="team-btn active-nit" onclick="switchTeam('Niterói')">🏢 Niterói</button>
+    <button class="team-btn" onclick="switchTeam('São Gonçalo')">🏙️ São Gonçalo</button>
+    <button class="team-btn" onclick="switchTeam('Todos')">📊 Todos</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" onclick="switchTab('visao')">Visão Geral</button>
+  <button class="tab" onclick="switchTab('corretores')">Corretores</button>
+  <button class="tab" onclick="switchTab('portais')">Portais</button>
+  <button class="tab" onclick="switchTab('tabela')">Tabela Completa</button>
+</nav>
+
+<main>
+
+<!-- ══ TAB: VISÃO GERAL ══ -->
+<div id="tab-visao" class="tab-panel active">
+  <div class="kpi-grid" id="kpi-grid"></div>
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">Leads por Fonte</div>
+      <div class="chart-wrap"><canvas id="chart-fonte"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Status dos Leads</div>
+      <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+    </div>
+  </div>
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">Leads por Equipe Original</div>
+      <div class="chart-wrap"><canvas id="chart-equipe"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Canal de Entrada</div>
+      <div class="chart-wrap"><canvas id="chart-canal"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: CORRETORES ══ -->
+<div id="tab-corretores" class="tab-panel">
+  <div class="section-header">
+    <span class="section-title">Selecione um Corretor</span>
+  </div>
+  <div class="corr-list" id="corr-list"></div>
+  <div id="corretor-detail" style="display:none">
+    <div class="divider"></div>
+    <div class="section-header">
+      <span class="section-title" id="corr-detail-name"></span>
+    </div>
+    <div class="kpi-grid" id="corr-kpis"></div>
+    <div class="corretor-overview">
+      <div class="card">
+        <div class="card-title">Fonte dos Leads</div>
+        <div class="chart-wrap"><canvas id="chart-corr-fonte"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Status dos Leads</div>
+        <div class="chart-wrap"><canvas id="chart-corr-status"></canvas></div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="table-corr">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Fonte</th>
+            <th>Canal</th>
+            <th>Criado em</th>
+            <th>Respondido em</th>
+            <th>Valor do Imóvel</th>
+            <th>Status</th>
+            <th>Atendido</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-corr"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: PORTAIS ══ -->
+<div id="tab-portais" class="tab-panel">
+  <div class="section-header">
+    <span class="section-title">Desempenho por Portal</span>
+  </div>
+  <div class="portais-grid" id="portais-grid"></div>
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">Volume de Leads por Portal</div>
+      <div class="chart-wrap"><canvas id="chart-portal-vol"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Valor Médio por Portal (R$)</div>
+      <div class="chart-wrap"><canvas id="chart-portal-val"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: TABELA ══ -->
+<div id="tab-tabela" class="tab-panel">
+  <div class="search-row">
+    <input type="text" id="search-input" placeholder="🔍  Buscar por corretor, status, fonte..." oninput="filterTable()">
+    <select id="filter-status" onchange="filterTable()">
+      <option value="">Todos os status</option>
+      <option>Arquivado</option>
+      <option>Em negociação</option>
+      <option>Novo</option>
+      <option>Negócio fechado</option>
+    </select>
+    <select id="filter-fonte" onchange="filterTable()">
+      <option value="">Todas as fontes</option>
+    </select>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortTable('corretor')">Corretor ↕</th>
+          <th onclick="sortTable('equipe')">Equipe ↕</th>
+          <th onclick="sortTable('fonte')">Fonte ↕</th>
+          <th>Canal</th>
+          <th onclick="sortTable('criado_str')">Criado em ↕</th>
+          <th>Respondido em</th>
+          <th onclick="sortTable('preco')">Valor ↕</th>
+          <th onclick="sortTable('status')">Status ↕</th>
+          <th>Atendido</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-main"></tbody>
+    </table>
+    <div class="pagination">
+      <span id="pag-info"></span>
+      <div class="page-btns" id="pag-btns"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
+const RAW = [{"id":85920323,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Carine Mello","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 22:22","respondido_str":"04/05/2026 11:16","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":85920290,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Facebook Leads","canal":"Internet","criado_str":"30/04/2026 22:22","respondido_str":"02/05/2026 10:01","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85917259,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Facebook Leads","canal":"Internet","criado_str":"30/04/2026 21:17","respondido_str":"02/05/2026 10:06","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85915770,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 20:44","respondido_str":"04/05/2026 14:18","status":"Em negociação","preco":2000000.0,"atendido":"Não"},{"id":85914329,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 20:12","respondido_str":"04/05/2026 11:35","status":"Em negociação","preco":2200000.0,"atendido":"Não"},{"id":85914143,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 20:08","respondido_str":"","status":"Em negociação","preco":2500000.0,"atendido":"Não"},{"id":85912844,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 19:42","respondido_str":"02/05/2026 10:04","status":"Em negociação","preco":2100000.0,"atendido":"Não"},{"id":85912133,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 19:25","respondido_str":"30/04/2026 19:27","status":"Em negociação","preco":5950000.0,"atendido":"Não"},{"id":85910111,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 18:44","respondido_str":"02/05/2026 11:24","status":"Em negociação","preco":7500000.0,"atendido":"Não"},{"id":85909932,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 18:40","respondido_str":"","status":"Em negociação","preco":25000000.0,"atendido":"Não"},{"id":85902540,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 16:36","respondido_str":"","status":"Em negociação","preco":900000.0,"atendido":"Não"},{"id":85900267,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 15:54","respondido_str":"30/04/2026 15:59","status":"Arquivado","preco":2350000.0,"atendido":"Não"},{"id":85899458,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"30/04/2026 15:37","respondido_str":"30/04/2026 22:07","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85897040,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 14:45","respondido_str":"30/04/2026 18:58","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":85891960,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Telefone","canal":"Telefone","criado_str":"30/04/2026 13:02","respondido_str":"","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85889032,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Telefone","canal":"Telefone","criado_str":"30/04/2026 12:08","respondido_str":"","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85888936,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Instagram Leads","canal":"Internet","criado_str":"30/04/2026 12:07","respondido_str":"","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85885090,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 11:06","respondido_str":"30/04/2026 16:00","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":85880498,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Telefone","canal":"Telefone","criado_str":"30/04/2026 09:43","respondido_str":"30/04/2026 09:47","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85872702,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 01:54","respondido_str":"30/04/2026 14:49","status":"Em negociação","preco":2900000.0,"atendido":"Não"},{"id":85872105,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 00:59","respondido_str":"04/05/2026 12:05","status":"Em negociação","preco":2100000.0,"atendido":"Não"},{"id":85871922,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"30/04/2026 00:47","respondido_str":"30/04/2026 14:49","status":"Em negociação","preco":2500000.0,"atendido":"Não"},{"id":85865134,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"29/04/2026 22:12","respondido_str":"","status":"Em negociação","preco":2100000.0,"atendido":"Não"},{"id":85864501,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"29/04/2026 22:00","respondido_str":"30/04/2026 16:05","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":85863969,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"29/04/2026 21:53","respondido_str":"","status":"Em negociação","preco":1500000.0,"atendido":"Não"},{"id":85857644,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"29/04/2026 19:59","respondido_str":"30/04/2026 10:21","status":"Em negociação","preco":2100000.0,"atendido":"Não"},{"id":85855056,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Grupo Zap","canal":"Internet","criado_str":"29/04/2026 19:13","respondido_str":"30/04/2026 12:02","status":"Em negociação","preco":3500000.0,"atendido":"Não"},{"id":85852628,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"29/04/2026 18:37","respondido_str":"30/04/2026 14:53","status":"Arquivado","preco":1800000.0,"atendido":"Não"},{"id":85850192,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"29/04/2026 18:05","respondido_str":"30/04/2026 10:14","status":"Em negociação","preco":4500000.0,"atendido":"Não"},{"id":85841050,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Carine Mello","fonte":"Grupo Zap","canal":"Internet","criado_str":"29/04/2026 15:55","respondido_str":"29/04/2026 16:16","status":"Em negociação","preco":350000.0,"atendido":"Não"},{"id":85840550,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Telefone","canal":"Telefone","criado_str":"29/04/2026 15:47","respondido_str":"30/04/2026 09:13","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85827164,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"29/04/2026 12:26","respondido_str":"29/04/2026 19:51","status":"Arquivado","preco":3950000.0,"atendido":"Não"},{"id":85820016,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Telefone","canal":"Telefone","criado_str":"29/04/2026 10:46","respondido_str":"29/04/2026 11:00","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85817788,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Telefone","canal":"Telefone","criado_str":"29/04/2026 10:10","respondido_str":"29/04/2026 10:30","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85795907,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"28/04/2026 21:06","respondido_str":"29/04/2026 13:47","status":"Em negociação","preco":450000.0,"atendido":"Não"},{"id":85793943,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"28/04/2026 20:27","respondido_str":"30/04/2026 11:04","status":"Em negociação","preco":1000000.0,"atendido":"Não"},{"id":85790568,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Grupo Zap","canal":"Internet","criado_str":"28/04/2026 19:16","respondido_str":"01/05/2026 15:26","status":"Arquivado","preco":1300000.0,"atendido":"Não"},{"id":85779573,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"28/04/2026 15:56","respondido_str":"03/05/2026 13:02","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":85762242,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"28/04/2026 12:21","respondido_str":"","status":"Em negociação","preco":2500000.0,"atendido":"Não"},{"id":85759872,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"28/04/2026 11:46","respondido_str":"28/04/2026 13:39","status":"Em negociação","preco":190000.0,"atendido":"Não"},{"id":85757430,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Telefone","canal":"Telefone","criado_str":"28/04/2026 11:07","respondido_str":"","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85736958,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 21:47","respondido_str":"","status":"Em negociação","preco":4500000.0,"atendido":"Não"},{"id":85724820,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 18:55","respondido_str":"27/04/2026 21:39","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":85719722,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 17:53","respondido_str":"","status":"Em negociação","preco":4500000.0,"atendido":"Não"},{"id":85714411,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 16:31","respondido_str":"","status":"Em negociação","preco":1000000.0,"atendido":"Não"},{"id":85713781,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 16:22","respondido_str":"28/04/2026 11:38","status":"Em negociação","preco":1000000.0,"atendido":"Não"},{"id":85710386,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Telefone","canal":"Telefone","criado_str":"27/04/2026 15:32","respondido_str":"27/04/2026 17:44","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85709542,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 15:21","respondido_str":"29/04/2026 01:22","status":"Em negociação","preco":4500000.0,"atendido":"Não"},{"id":85706046,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 14:36","respondido_str":"27/04/2026 21:45","status":"Em negociação","preco":690000.0,"atendido":"Não"},{"id":85704547,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 14:13","respondido_str":"27/04/2026 22:53","status":"Em negociação","preco":1800000.0,"atendido":"Não"},{"id":85703140,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 13:55","respondido_str":"28/04/2026 09:58","status":"Arquivado","preco":300000.0,"atendido":"Não"},{"id":85696470,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 12:32","respondido_str":"28/04/2026 10:46","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":85692341,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Telefone","canal":"Telefone","criado_str":"27/04/2026 11:48","respondido_str":"28/04/2026 10:47","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85690862,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 11:30","respondido_str":"27/04/2026 21:33","status":"Em negociação","preco":830000.0,"atendido":"Não"},{"id":85689840,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 11:16","respondido_str":"27/04/2026 12:31","status":"Em negociação","preco":1800000.0,"atendido":"Não"},{"id":85687062,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 10:39","respondido_str":"27/04/2026 23:46","status":"Arquivado","preco":240000.0,"atendido":"Não"},{"id":85685154,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Grupo Zap","canal":"Internet","criado_str":"27/04/2026 10:14","respondido_str":"27/04/2026 10:45","status":"Em negociação","preco":270000.0,"atendido":"Não"},{"id":85667579,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"26/04/2026 22:03","respondido_str":"","status":"Em negociação","preco":500000.0,"atendido":"Não"},{"id":85666614,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"26/04/2026 21:48","respondido_str":"27/04/2026 09:05","status":"Em negociação","preco":4500000.0,"atendido":"Não"},{"id":85664288,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"26/04/2026 21:06","respondido_str":"","status":"Em negociação","preco":3340000.0,"atendido":"Não"},{"id":85656378,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"26/04/2026 18:36","respondido_str":"28/04/2026 10:55","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":85647481,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"26/04/2026 15:39","respondido_str":"27/04/2026 10:26","status":"Em negociação","preco":260000.0,"atendido":"Não"},{"id":85647074,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"26/04/2026 15:30","respondido_str":"27/04/2026 22:55","status":"Em negociação","preco":449000.0,"atendido":"Não"},{"id":85646292,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"26/04/2026 15:15","respondido_str":"27/04/2026 11:29","status":"Arquivado","preco":1300000.0,"atendido":"Não"},{"id":85628808,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"26/04/2026 09:42","respondido_str":"28/04/2026 10:56","status":"Arquivado","preco":2200000.0,"atendido":"Não"},{"id":85615646,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"25/04/2026 21:50","respondido_str":"28/04/2026 10:58","status":"Arquivado","preco":3000000.0,"atendido":"Não"},{"id":85615196,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"25/04/2026 21:38","respondido_str":"","status":"Em negociação","preco":240000.0,"atendido":"Não"},{"id":85614859,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Carine Mello","fonte":"Grupo Zap","canal":"Internet","criado_str":"25/04/2026 21:29","respondido_str":"27/04/2026 18:17","status":"Em negociação","preco":1300000.0,"atendido":"Não"},{"id":85614591,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"25/04/2026 21:22","respondido_str":"28/04/2026 10:58","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85613570,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"25/04/2026 20:57","respondido_str":"","status":"Em negociação","preco":2100000.0,"atendido":"Não"},{"id":85612074,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"25/04/2026 20:20","respondido_str":"28/04/2026 10:47","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":85611775,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"25/04/2026 20:12","respondido_str":"25/04/2026 21:55","status":"Em negociação","preco":190000.0,"atendido":"Não"},{"id":85609574,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"25/04/2026 19:21","respondido_str":"25/04/2026 21:58","status":"Em negociação","preco":135000.0,"atendido":"Não"},{"id":85608088,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"25/04/2026 18:47","respondido_str":"27/04/2026 09:04","status":"Em negociação","preco":5500000.0,"atendido":"Não"},{"id":85595626,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"25/04/2026 14:43","respondido_str":"","status":"Em negociação","preco":3000000.0,"atendido":"Não"},{"id":85592677,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"25/04/2026 14:03","respondido_str":"27/04/2026 11:38","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85586711,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Telefone","canal":"Telefone","criado_str":"25/04/2026 12:34","respondido_str":"","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85572139,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"25/04/2026 07:12","respondido_str":"25/04/2026 11:55","status":"Arquivado","preco":1000000.0,"atendido":"Não"},{"id":85565984,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"24/04/2026 23:19","respondido_str":"25/04/2026 10:06","status":"Em negociação","preco":2800000.0,"atendido":"Não"},{"id":85564828,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"24/04/2026 22:46","respondido_str":"","status":"Novo","preco":2100000.0,"atendido":"Não"},{"id":85558562,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Instagram Leads","canal":"Internet","criado_str":"24/04/2026 20:25","respondido_str":"","status":"Novo","preco":210000.0,"atendido":"Não"},{"id":85555855,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"24/04/2026 19:30","respondido_str":"25/04/2026 09:46","status":"Em negociação","preco":2600000.0,"atendido":"Não"},{"id":85552485,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Instagram Leads","canal":"Internet","criado_str":"24/04/2026 18:15","respondido_str":"","status":"Novo","preco":210000.0,"atendido":"Não"},{"id":85551362,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"24/04/2026 17:47","respondido_str":"25/04/2026 11:49","status":"Em negociação","preco":390000.0,"atendido":"Não"},{"id":85550754,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Telefone","canal":"Telefone","criado_str":"24/04/2026 17:36","respondido_str":"24/04/2026 18:50","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85540907,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Cíntia Monteiro","fonte":"Telefone","canal":"Telefone","criado_str":"24/04/2026 15:02","respondido_str":"24/04/2026 15:33","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85538828,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"24/04/2026 14:36","respondido_str":"24/04/2026 15:29","status":"Em negociação","preco":2500.0,"atendido":"Não"},{"id":85537118,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Telefone","canal":"Telefone","criado_str":"24/04/2026 14:13","respondido_str":"","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85535575,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Cíntia Monteiro","fonte":"Telefone","canal":"Telefone","criado_str":"24/04/2026 13:49","respondido_str":"24/04/2026 15:19","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85534799,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Telefone","canal":"Telefone","criado_str":"24/04/2026 13:36","respondido_str":"25/04/2026 09:14","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85534313,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"24/04/2026 13:27","respondido_str":"24/04/2026 14:01","status":"Arquivado","preco":2600000.0,"atendido":"Não"},{"id":85527557,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"24/04/2026 11:37","respondido_str":"28/04/2026 11:05","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":85525809,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"24/04/2026 11:07","respondido_str":"24/04/2026 11:37","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85522132,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Instagram Leads","canal":"Internet","criado_str":"24/04/2026 10:03","respondido_str":"30/04/2026 15:54","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":85521548,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"24/04/2026 09:54","respondido_str":"","status":"Novo","preco":2100000.0,"atendido":"Não"},{"id":85521278,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"24/04/2026 09:50","respondido_str":"28/04/2026 11:06","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":85518849,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"24/04/2026 09:01","respondido_str":"28/04/2026 11:03","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":85516737,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"24/04/2026 08:06","respondido_str":"25/04/2026 11:30","status":"Em negociação","preco":240000.0,"atendido":"Não"},{"id":85509154,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 23:16","respondido_str":"24/04/2026 14:56","status":"Arquivado","preco":830000.0,"atendido":"Não"},{"id":85505362,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Carine Mello","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 22:00","respondido_str":"27/04/2026 17:27","status":"Arquivado","preco":2700000.0,"atendido":"Não"},{"id":85504694,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 21:47","respondido_str":"27/04/2026 17:58","status":"Em negociação","preco":1900000.0,"atendido":"Não"},{"id":85503864,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Facebook Leads","canal":"Internet","criado_str":"23/04/2026 21:32","respondido_str":"28/04/2026 11:15","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85502381,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"23/04/2026 21:02","respondido_str":"24/04/2026 15:45","status":"Arquivado","preco":450000.0,"atendido":"Não"},{"id":85499645,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 20:08","respondido_str":"23/04/2026 20:10","status":"Em negociação","preco":190000.0,"atendido":"Não"},{"id":85497113,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 19:18","respondido_str":"27/04/2026 21:42","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":85496259,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 19:01","respondido_str":"28/04/2026 11:15","status":"Arquivado","preco":2250000.0,"atendido":"Não"},{"id":85489569,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Facebook Leads","canal":"Internet","criado_str":"23/04/2026 17:09","respondido_str":"24/04/2026 15:38","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85486230,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 16:29","respondido_str":"","status":"Em negociação","preco":5600000.0,"atendido":"Não"},{"id":85482545,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Instagram Leads","canal":"Internet","criado_str":"23/04/2026 15:41","respondido_str":"24/04/2026 15:02","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85482293,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Facebook Leads","canal":"Internet","criado_str":"23/04/2026 15:38","respondido_str":"27/04/2026 21:59","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85477279,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 14:36","respondido_str":"","status":"Em negociação","preco":475000.0,"atendido":"Não"},{"id":85463577,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 11:12","respondido_str":"27/04/2026 21:19","status":"Em negociação","preco":1600000.0,"atendido":"Não"},{"id":85445999,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"23/04/2026 08:22","respondido_str":"25/04/2026 10:04","status":"Em negociação","preco":489000.0,"atendido":"Não"},{"id":85443773,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 07:08","respondido_str":"23/04/2026 09:56","status":"Em negociação","preco":6300000.0,"atendido":"Não"},{"id":85442626,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Facebook Leads","canal":"Internet","criado_str":"23/04/2026 05:54","respondido_str":"24/04/2026 15:05","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85440136,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"23/04/2026 02:20","respondido_str":"25/04/2026 13:41","status":"Arquivado","preco":2000000.0,"atendido":"Não"},{"id":85435551,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Instagram Leads","canal":"Internet","criado_str":"22/04/2026 23:31","respondido_str":"28/04/2026 11:16","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85428967,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Grupo Zap","canal":"Internet","criado_str":"22/04/2026 21:34","respondido_str":"27/04/2026 17:17","status":"Em negociação","preco":5500000.0,"atendido":"Não"},{"id":85427708,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"22/04/2026 21:13","respondido_str":"27/04/2026 21:40","status":"Em negociação","preco":2000000.0,"atendido":"Não"},{"id":85426493,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Instagram Leads","canal":"Internet","criado_str":"22/04/2026 20:55","respondido_str":"25/04/2026 09:19","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85420387,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"22/04/2026 19:14","respondido_str":"22/04/2026 19:16","status":"Arquivado","preco":380000.0,"atendido":"Não"},{"id":85414556,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Instagram Leads","canal":"Internet","criado_str":"22/04/2026 17:48","respondido_str":"08/05/2026 01:05","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85414123,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Facebook Leads","canal":"Internet","criado_str":"22/04/2026 17:42","respondido_str":"24/04/2026 13:46","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85414005,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"22/04/2026 17:40","respondido_str":"23/04/2026 11:17","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85402887,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"22/04/2026 15:09","respondido_str":"25/04/2026 10:04","status":"Em negociação","preco":2200000.0,"atendido":"Não"},{"id":85399773,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"22/04/2026 14:35","respondido_str":"25/04/2026 10:05","status":"Em negociação","preco":3800000.0,"atendido":"Não"},{"id":85399019,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"22/04/2026 14:28","respondido_str":"27/04/2026 20:31","status":"Em negociação","preco":2000000.0,"atendido":"Não"},{"id":85388099,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"22/04/2026 12:01","respondido_str":"27/04/2026 23:32","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":85381685,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"22/04/2026 10:32","respondido_str":"22/04/2026 10:58","status":"Arquivado","preco":6470000.0,"atendido":"Não"},{"id":85375516,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"22/04/2026 09:18","respondido_str":"22/04/2026 13:13","status":"Arquivado","preco":7400000.0,"atendido":"Não"},{"id":85374055,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"22/04/2026 08:51","respondido_str":"23/04/2026 11:22","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":85372672,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Instagram Leads","canal":"Internet","criado_str":"22/04/2026 08:17","respondido_str":"22/04/2026 08:20","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":85357368,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 20:45","respondido_str":"","status":"Em negociação","preco":330000.0,"atendido":"Não"},{"id":85352380,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 19:17","respondido_str":"21/04/2026 19:46","status":"Arquivado","preco":420000.0,"atendido":"Não"},{"id":85348807,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 18:17","respondido_str":"21/04/2026 20:13","status":"Arquivado","preco":7200000.0,"atendido":"Não"},{"id":85347022,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 17:47","respondido_str":"21/04/2026 17:49","status":"Arquivado","preco":2190000.0,"atendido":"Não"},{"id":85345877,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 17:27","respondido_str":"21/04/2026 17:29","status":"Em negociação","preco":230000.0,"atendido":"Não"},{"id":85345437,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 17:20","respondido_str":"22/04/2026 10:31","status":"Arquivado","preco":3950000.0,"atendido":"Não"},{"id":85343982,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 16:56","respondido_str":"21/04/2026 17:59","status":"Arquivado","preco":119000.0,"atendido":"Não"},{"id":85339498,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 15:41","respondido_str":"27/04/2026 21:37","status":"Em negociação","preco":1200000.0,"atendido":"Não"},{"id":85336810,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 14:57","respondido_str":"27/04/2026 22:03","status":"Em negociação","preco":2100000.0,"atendido":"Não"},{"id":85335901,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 14:43","respondido_str":"27/04/2026 21:37","status":"Em negociação","preco":2908900.0,"atendido":"Não"},{"id":85334652,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 14:22","respondido_str":"22/04/2026 15:27","status":"Arquivado","preco":3000000.0,"atendido":"Não"},{"id":85333594,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 14:02","respondido_str":"21/04/2026 19:48","status":"Arquivado","preco":3200000.0,"atendido":"Não"},{"id":85329950,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 12:52","respondido_str":"21/04/2026 12:54","status":"Arquivado","preco":900000.0,"atendido":"Não"},{"id":85324121,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 11:02","respondido_str":"21/04/2026 11:32","status":"Arquivado","preco":2000000.0,"atendido":"Não"},{"id":85320017,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"21/04/2026 09:40","respondido_str":"21/04/2026 19:50","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":85298936,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"20/04/2026 19:43","respondido_str":"20/04/2026 20:33","status":"Arquivado","preco":7000000.0,"atendido":"Não"},{"id":85293259,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"20/04/2026 17:49","respondido_str":"20/04/2026 19:03","status":"Em negociação","preco":190000.0,"atendido":"Não"},{"id":85292308,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"20/04/2026 17:32","respondido_str":"27/04/2026 20:36","status":"Em negociação","preco":6500000.0,"atendido":"Não"},{"id":85290598,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Instagram Leads","canal":"Internet","criado_str":"20/04/2026 17:04","respondido_str":"20/04/2026 17:40","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85286490,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"20/04/2026 15:59","respondido_str":"20/04/2026 16:45","status":"Arquivado","preco":870000.0,"atendido":"Não"},{"id":85282665,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Grupo Zap","canal":"Internet","criado_str":"20/04/2026 15:08","respondido_str":"20/04/2026 15:40","status":"Arquivado","preco":4500000.0,"atendido":"Não"},{"id":85277736,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Telefone","canal":"Telefone","criado_str":"20/04/2026 14:04","respondido_str":"20/04/2026 14:56","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85268656,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"20/04/2026 11:44","respondido_str":"21/04/2026 10:04","status":"Em negociação","preco":470000.0,"atendido":"Não"},{"id":85267803,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Telefone","canal":"Telefone","criado_str":"20/04/2026 11:30","respondido_str":"20/04/2026 11:32","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85265348,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"20/04/2026 10:54","respondido_str":"20/04/2026 15:00","status":"Arquivado","preco":180000.0,"atendido":"Não"},{"id":85265303,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"20/04/2026 10:53","respondido_str":"","status":"Em negociação","preco":165000.0,"atendido":"Não"},{"id":85263786,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Instagram Leads","canal":"Internet","criado_str":"20/04/2026 10:32","respondido_str":"27/04/2026 20:39","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85262273,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Telefone","canal":"Telefone","criado_str":"20/04/2026 10:11","respondido_str":"20/04/2026 11:42","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85261748,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Telefone","canal":"Telefone","criado_str":"20/04/2026 10:04","respondido_str":"20/04/2026 10:20","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85259668,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Telefone","canal":"Telefone","criado_str":"20/04/2026 09:33","respondido_str":"20/04/2026 10:27","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85259506,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Placa","canal":"Telefone","criado_str":"20/04/2026 09:31","respondido_str":"20/04/2026 10:31","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85259416,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Instagram Leads","canal":"Internet","criado_str":"20/04/2026 09:30","respondido_str":"20/04/2026 10:29","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85259290,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Placa","canal":"Telefone","criado_str":"20/04/2026 09:27","respondido_str":"20/04/2026 10:32","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85258379,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"20/04/2026 09:12","respondido_str":"20/04/2026 10:30","status":"Arquivado","preco":190.0,"atendido":"Não"},{"id":85255782,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"20/04/2026 08:17","respondido_str":"20/04/2026 10:57","status":"Em negociação","preco":2000000.0,"atendido":"Não"},{"id":85253368,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Facebook Leads","canal":"Internet","criado_str":"20/04/2026 06:29","respondido_str":"28/04/2026 10:05","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85246495,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"19/04/2026 22:36","respondido_str":"20/04/2026 09:31","status":"Arquivado","preco":2400000.0,"atendido":"Não"},{"id":85244434,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Instagram Leads","canal":"Internet","criado_str":"19/04/2026 21:52","respondido_str":"23/04/2026 17:09","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85243889,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"19/04/2026 21:40","respondido_str":"20/04/2026 11:45","status":"Arquivado","preco":3200000.0,"atendido":"Não"},{"id":85243149,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Instagram Leads","canal":"Internet","criado_str":"19/04/2026 21:24","respondido_str":"20/04/2026 02:36","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85240670,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Grupo Zap","canal":"Internet","criado_str":"19/04/2026 20:29","respondido_str":"20/04/2026 09:44","status":"Arquivado","preco":4500000.0,"atendido":"Não"},{"id":85232589,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"19/04/2026 17:30","respondido_str":"19/04/2026 18:18","status":"Em negociação","preco":3200000.0,"atendido":"Não"},{"id":85227604,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"19/04/2026 15:38","respondido_str":"20/04/2026 15:08","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":85226578,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"19/04/2026 15:16","respondido_str":"20/04/2026 12:42","status":"Arquivado","preco":7000000.0,"atendido":"Não"},{"id":85221570,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"19/04/2026 13:49","respondido_str":"20/04/2026 10:57","status":"Em negociação","preco":5900000.0,"atendido":"Não"},{"id":85211090,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"19/04/2026 10:12","respondido_str":"20/04/2026 22:36","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":85209296,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"19/04/2026 09:27","respondido_str":"20/04/2026 22:27","status":"Arquivado","preco":1800000.0,"atendido":"Não"},{"id":85202235,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"19/04/2026 00:49","respondido_str":"27/04/2026 20:41","status":"Em negociação","preco":1300000.0,"atendido":"Não"},{"id":85193135,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"18/04/2026 20:13","respondido_str":"20/04/2026 22:39","status":"Arquivado","preco":119000.0,"atendido":"Não"},{"id":85180897,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"18/04/2026 15:26","respondido_str":"18/04/2026 15:49","status":"Arquivado","preco":380000.0,"atendido":"Não"},{"id":85177944,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Instagram Leads","canal":"Internet","criado_str":"18/04/2026 14:19","respondido_str":"04/05/2026 01:08","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85165702,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Grupo Zap","canal":"Internet","criado_str":"18/04/2026 10:11","respondido_str":"18/04/2026 10:19","status":"Arquivado","preco":1300000.0,"atendido":"Não"},{"id":85164213,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"18/04/2026 09:44","respondido_str":"18/04/2026 11:03","status":"Arquivado","preco":5500000.0,"atendido":"Não"},{"id":85163604,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Grupo Zap","canal":"Internet","criado_str":"18/04/2026 09:32","respondido_str":"20/04/2026 09:10","status":"Arquivado","preco":3950000.0,"atendido":"Não"},{"id":85161224,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Instagram Leads","canal":"Internet","criado_str":"18/04/2026 08:32","respondido_str":"28/04/2026 11:17","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85150776,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Instagram Leads","canal":"Internet","criado_str":"17/04/2026 22:10","respondido_str":"27/04/2026 20:46","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85149961,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 21:53","respondido_str":"20/04/2026 22:44","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":85141216,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Instagram Leads","canal":"Internet","criado_str":"17/04/2026 18:54","respondido_str":"30/04/2026 15:56","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":85139208,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Instagram Leads","canal":"Internet","criado_str":"17/04/2026 18:12","respondido_str":"17/04/2026 18:17","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85137738,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 17:39","respondido_str":"27/04/2026 17:24","status":"Em negociação","preco":1800000.0,"atendido":"Não"},{"id":85135979,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 17:10","respondido_str":"20/04/2026 22:46","status":"Arquivado","preco":2000000.0,"atendido":"Não"},{"id":85135880,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Telefone","canal":"Telefone","criado_str":"17/04/2026 17:09","respondido_str":"30/04/2026 18:19","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85135227,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 16:58","respondido_str":"17/04/2026 17:15","status":"Arquivado","preco":520000.0,"atendido":"Não"},{"id":85130073,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 15:31","respondido_str":"17/04/2026 16:10","status":"Arquivado","preco":11000000.0,"atendido":"Não"},{"id":85129495,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 15:23","respondido_str":"17/04/2026 15:25","status":"Arquivado","preco":5300000.0,"atendido":"Não"},{"id":85127401,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 14:50","respondido_str":"27/04/2026 22:11","status":"Em negociação","preco":2100000.0,"atendido":"Não"},{"id":85127055,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 14:46","respondido_str":"17/04/2026 17:43","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":85121752,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 13:28","respondido_str":"20/04/2026 22:53","status":"Arquivado","preco":7000000.0,"atendido":"Não"},{"id":85121600,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Carine Mello","fonte":"Telefone","canal":"Telefone","criado_str":"17/04/2026 13:26","respondido_str":"17/04/2026 13:30","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85120076,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Facebook Leads","canal":"Internet","criado_str":"17/04/2026 13:01","respondido_str":"20/04/2026 22:47","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85117566,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 12:27","respondido_str":"27/04/2026 21:48","status":"Em negociação","preco":15000000.0,"atendido":"Não"},{"id":85114660,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"17/04/2026 11:45","respondido_str":"17/04/2026 11:52","status":"Arquivado","preco":400000.0,"atendido":"Não"},{"id":85114501,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 11:42","respondido_str":"17/04/2026 11:43","status":"Arquivado","preco":11000000.0,"atendido":"Não"},{"id":85114262,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 11:39","respondido_str":"17/04/2026 12:09","status":"Em negociação","preco":1600000.0,"atendido":"Não"},{"id":85112398,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 11:15","respondido_str":"17/04/2026 13:34","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":85111897,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 11:08","respondido_str":"27/04/2026 22:47","status":"Arquivado","preco":2908900.0,"atendido":"Não"},{"id":85111275,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 11:01","respondido_str":"17/04/2026 14:03","status":"Arquivado","preco":1000000.0,"atendido":"Não"},{"id":85109255,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 10:33","respondido_str":"17/04/2026 13:38","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":85105266,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Facebook Leads","canal":"Internet","criado_str":"17/04/2026 09:41","respondido_str":"17/04/2026 10:42","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85104589,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Telefone","canal":"Telefone","criado_str":"17/04/2026 09:32","respondido_str":"17/04/2026 09:42","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85101495,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"17/04/2026 08:28","respondido_str":"17/04/2026 08:31","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85100877,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Instagram Leads","canal":"Internet","criado_str":"17/04/2026 08:09","respondido_str":"17/04/2026 12:23","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85093384,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Grupo Zap","canal":"Internet","criado_str":"17/04/2026 00:20","respondido_str":"17/04/2026 10:59","status":"Arquivado","preco":1650000.0,"atendido":"Não"},{"id":85091716,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 23:34","respondido_str":"20/04/2026 09:45","status":"Arquivado","preco":950000.0,"atendido":"Não"},{"id":85091076,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 23:18","respondido_str":"17/04/2026 17:28","status":"Arquivado","preco":2000000.0,"atendido":"Não"},{"id":85083770,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 20:46","respondido_str":"28/04/2026 12:50","status":"Arquivado","preco":3950000.0,"atendido":"Não"},{"id":85081987,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 20:08","respondido_str":"23/04/2026 10:27","status":"Em negociação","preco":3500000.0,"atendido":"Não"},{"id":85080963,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 19:47","respondido_str":"17/04/2026 18:11","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":85080839,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 19:44","respondido_str":"17/04/2026 08:32","status":"Arquivado","preco":2000000.0,"atendido":"Não"},{"id":85080181,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 19:30","respondido_str":"17/04/2026 14:57","status":"Arquivado","preco":380000.0,"atendido":"Não"},{"id":85079599,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Facebook Leads","canal":"Internet","criado_str":"16/04/2026 19:17","respondido_str":"27/04/2026 22:01","status":"Em negociação","preco":210000.0,"atendido":"Não"},{"id":85078806,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 19:00","respondido_str":"17/04/2026 09:40","status":"Em negociação","preco":3800000.0,"atendido":"Não"},{"id":85073779,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Telefone","canal":"Telefone","criado_str":"16/04/2026 17:20","respondido_str":"16/04/2026 17:43","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85073228,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 17:09","respondido_str":"16/04/2026 17:14","status":"Arquivado","preco":328000.0,"atendido":"Não"},{"id":85073172,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 17:08","respondido_str":"16/04/2026 17:21","status":"Arquivado","preco":3000000.0,"atendido":"Não"},{"id":85073142,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 17:08","respondido_str":"16/04/2026 18:12","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":85072102,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 16:47","respondido_str":"16/04/2026 17:30","status":"Arquivado","preco":300000.0,"atendido":"Não"},{"id":85071996,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 16:44","respondido_str":"16/04/2026 17:11","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":85068768,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Instagram Leads","canal":"Internet","criado_str":"16/04/2026 15:49","respondido_str":"17/04/2026 18:34","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":85065480,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 14:53","respondido_str":"23/04/2026 10:28","status":"Em negociação","preco":3500000.0,"atendido":"Não"},{"id":85062245,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 14:07","respondido_str":"16/04/2026 14:09","status":"Arquivado","preco":2300000.0,"atendido":"Não"},{"id":85058950,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Fernando Macedo","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 13:33","respondido_str":"16/04/2026 13:35","status":"Arquivado","preco":950000.0,"atendido":"Não"},{"id":85054556,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 12:17","respondido_str":"17/04/2026 08:35","status":"Arquivado","preco":190000.0,"atendido":"Não"},{"id":85054147,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 12:10","respondido_str":"17/04/2026 10:48","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":85052459,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 11:40","respondido_str":"17/04/2026 10:49","status":"Arquivado","preco":280000.0,"atendido":"Não"},{"id":85052297,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 11:37","respondido_str":"16/04/2026 16:08","status":"Arquivado","preco":9800000.0,"atendido":"Não"},{"id":85050053,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 11:02","respondido_str":"17/04/2026 10:51","status":"Arquivado","preco":280000.0,"atendido":"Não"},{"id":85049367,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 10:53","respondido_str":"16/04/2026 15:58","status":"Arquivado","preco":380000.0,"atendido":"Não"},{"id":85048694,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 10:45","respondido_str":"23/04/2026 10:26","status":"Em negociação","preco":3500000.0,"atendido":"Não"},{"id":85046721,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"16/04/2026 10:20","respondido_str":"16/04/2026 11:26","status":"Arquivado","preco":190000.0,"atendido":"Não"},{"id":85046720,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Telefone","canal":"Telefone","criado_str":"16/04/2026 10:20","respondido_str":"16/04/2026 11:52","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":85044984,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 09:56","respondido_str":"16/04/2026 10:26","status":"Arquivado","preco":3800000.0,"atendido":"Não"},{"id":85044381,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 09:47","respondido_str":"16/04/2026 15:50","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":85044168,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 09:45","respondido_str":"16/04/2026 10:05","status":"Arquivado","preco":5500000.0,"atendido":"Não"},{"id":85042767,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 09:26","respondido_str":"27/04/2026 16:56","status":"Em negociação","preco":2600000.0,"atendido":"Não"},{"id":85041314,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"16/04/2026 09:02","respondido_str":"17/04/2026 10:52","status":"Arquivado","preco":200000.0,"atendido":"Não"},{"id":85035758,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 06:46","respondido_str":"17/04/2026 17:46","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":85030896,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"16/04/2026 02:31","respondido_str":"17/04/2026 10:53","status":"Arquivado","preco":190000.0,"atendido":"Não"},{"id":85023437,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"15/04/2026 23:09","respondido_str":"16/04/2026 02:05","status":"Arquivado","preco":190000.0,"atendido":"Não"},{"id":85010268,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"15/04/2026 19:52","respondido_str":"16/04/2026 01:52","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":85008263,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"15/04/2026 19:22","respondido_str":"28/04/2026 10:10","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":85003152,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"15/04/2026 18:04","respondido_str":"15/04/2026 18:08","status":"Arquivado","preco":190000.0,"atendido":"Não"},{"id":84994256,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Telefone","canal":"Telefone","criado_str":"15/04/2026 16:19","respondido_str":"15/04/2026 17:13","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84990001,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"15/04/2026 15:28","respondido_str":"27/04/2026 21:55","status":"Em negociação","preco":7790000.0,"atendido":"Não"},{"id":84988812,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Telefone","canal":"Telefone","criado_str":"15/04/2026 15:11","respondido_str":"16/04/2026 12:05","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84988709,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"15/04/2026 15:09","respondido_str":"27/04/2026 20:51","status":"Em negociação","preco":300000.0,"atendido":"Não"},{"id":84978969,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"15/04/2026 13:27","respondido_str":"15/04/2026 14:12","status":"Em negociação","preco":190000.0,"atendido":"Não"},{"id":84974336,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"15/04/2026 12:39","respondido_str":"17/04/2026 10:59","status":"Arquivado","preco":6000000.0,"atendido":"Não"},{"id":84973094,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Telefone","canal":"Telefone","criado_str":"15/04/2026 12:23","respondido_str":"15/04/2026 12:31","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84968197,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"15/04/2026 11:26","respondido_str":"15/04/2026 15:04","status":"Em negociação","preco":950000.0,"atendido":"Não"},{"id":84966587,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Telefone","canal":"Telefone","criado_str":"15/04/2026 11:05","respondido_str":"15/04/2026 11:44","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":84961049,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"15/04/2026 09:51","respondido_str":"27/04/2026 22:44","status":"Arquivado","preco":2000000.0,"atendido":"Não"},{"id":84944125,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"14/04/2026 22:46","respondido_str":"14/04/2026 22:53","status":"Arquivado","preco":280000.0,"atendido":"Não"},{"id":84942295,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 22:11","respondido_str":"14/04/2026 22:21","status":"Arquivado","preco":5800000.0,"atendido":"Não"},{"id":84941596,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 21:59","respondido_str":"15/04/2026 09:27","status":"Em negociação","preco":830000.0,"atendido":"Não"},{"id":84933884,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 19:30","respondido_str":"23/04/2026 10:29","status":"Em negociação","preco":3500000.0,"atendido":"Não"},{"id":84931518,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 18:39","respondido_str":"14/04/2026 20:53","status":"Arquivado","preco":980000.0,"atendido":"Não"},{"id":84920521,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 15:42","respondido_str":"14/04/2026 17:11","status":"Arquivado","preco":2200000.0,"atendido":"Não"},{"id":84913381,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 13:52","respondido_str":"14/04/2026 14:23","status":"Arquivado","preco":2000000.0,"atendido":"Não"},{"id":84912840,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 13:44","respondido_str":"28/04/2026 10:13","status":"Em negociação","preco":2100000.0,"atendido":"Não"},{"id":84912520,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 13:39","respondido_str":"14/04/2026 15:00","status":"Arquivado","preco":180000.0,"atendido":"Não"},{"id":84907258,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 12:39","respondido_str":"23/04/2026 10:30","status":"Em negociação","preco":3500000.0,"atendido":"Não"},{"id":84905338,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 12:31","respondido_str":"14/04/2026 16:35","status":"Arquivado","preco":830000.0,"atendido":"Não"},{"id":84905185,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 12:29","respondido_str":"14/04/2026 12:57","status":"Arquivado","preco":3100000.0,"atendido":"Não"},{"id":84903777,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 12:07","respondido_str":"27/04/2026 16:11","status":"Em negociação","preco":4000000.0,"atendido":"Não"},{"id":84902437,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 11:47","respondido_str":"14/04/2026 12:53","status":"Arquivado","preco":4000000.0,"atendido":"Não"},{"id":84899917,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Telefone","canal":"Telefone","criado_str":"14/04/2026 11:10","respondido_str":"14/04/2026 11:56","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84896188,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 10:12","respondido_str":"14/04/2026 17:10","status":"Arquivado","preco":2900000.0,"atendido":"Não"},{"id":84894286,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 09:41","respondido_str":"14/04/2026 09:46","status":"Arquivado","preco":2850000.0,"atendido":"Não"},{"id":84893373,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 09:24","respondido_str":"14/04/2026 09:56","status":"Arquivado","preco":7400000.0,"atendido":"Não"},{"id":84881207,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"14/04/2026 01:28","respondido_str":"14/04/2026 18:37","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":84876195,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 23:10","respondido_str":"14/04/2026 18:54","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":84870075,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 21:39","respondido_str":"14/04/2026 18:55","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":84867146,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 20:55","respondido_str":"13/04/2026 21:33","status":"Arquivado","preco":3950000.0,"atendido":"Não"},{"id":84864501,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 20:18","respondido_str":"13/04/2026 22:58","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84862535,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 19:53","respondido_str":"13/04/2026 20:04","status":"Arquivado","preco":3499000.0,"atendido":"Não"},{"id":84861200,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 19:39","respondido_str":"13/04/2026 19:54","status":"Arquivado","preco":12500000.0,"atendido":"Não"},{"id":84859397,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 19:19","respondido_str":"17/04/2026 11:55","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84853711,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 18:06","respondido_str":"13/04/2026 18:36","status":"Em negociação","preco":9900000.0,"atendido":"Não"},{"id":84848932,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 17:05","respondido_str":"13/04/2026 17:18","status":"Arquivado","preco":130000.0,"atendido":"Não"},{"id":84848673,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Carine Mello","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 17:02","respondido_str":"27/04/2026 16:10","status":"Arquivado","preco":2700000.0,"atendido":"Não"},{"id":84845361,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 16:24","respondido_str":"13/04/2026 17:13","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84844236,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 16:08","respondido_str":"13/04/2026 16:10","status":"Arquivado","preco":4750000.0,"atendido":"Não"},{"id":84837440,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 14:24","respondido_str":"13/04/2026 16:03","status":"Arquivado","preco":1200000.0,"atendido":"Não"},{"id":84836061,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 14:03","respondido_str":"14/04/2026 10:03","status":"Arquivado","preco":870000.0,"atendido":"Não"},{"id":84830119,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 12:46","respondido_str":"13/04/2026 22:59","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84829965,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 12:44","respondido_str":"13/04/2026 12:50","status":"Arquivado","preco":1800000.0,"atendido":"Não"},{"id":84824448,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 11:26","respondido_str":"13/04/2026 14:25","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":84823154,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Telefone","canal":"Telefone","criado_str":"13/04/2026 11:09","respondido_str":"13/04/2026 13:59","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84821755,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 10:52","respondido_str":"13/04/2026 14:44","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84817949,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 10:02","respondido_str":"13/04/2026 10:52","status":"Arquivado","preco":4400000.0,"atendido":"Não"},{"id":84808591,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 03:48","respondido_str":"13/04/2026 03:52","status":"Arquivado","preco":2300000.0,"atendido":"Não"},{"id":84806301,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 00:21","respondido_str":"13/04/2026 10:10","status":"Arquivado","preco":4600000.0,"atendido":"Não"},{"id":84806000,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"13/04/2026 00:09","respondido_str":"13/04/2026 11:44","status":"Arquivado","preco":2200000.0,"atendido":"Não"},{"id":84798879,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"12/04/2026 21:30","respondido_str":"13/04/2026 10:38","status":"Arquivado","preco":11000000.0,"atendido":"Não"},{"id":84790829,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"12/04/2026 18:58","respondido_str":"13/04/2026 16:48","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":84780056,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Grupo Zap","canal":"Internet","criado_str":"12/04/2026 15:37","respondido_str":"12/04/2026 15:41","status":"Arquivado","preco":21500000.0,"atendido":"Não"},{"id":84773568,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"12/04/2026 13:42","respondido_str":"12/04/2026 15:03","status":"Arquivado","preco":3200000.0,"atendido":"Não"},{"id":84772811,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"12/04/2026 13:28","respondido_str":"12/04/2026 14:01","status":"Arquivado","preco":2400000.0,"atendido":"Não"},{"id":84766583,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"12/04/2026 11:31","respondido_str":"12/04/2026 18:04","status":"Arquivado","preco":870000.0,"atendido":"Não"},{"id":84766407,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"12/04/2026 11:27","respondido_str":"12/04/2026 11:29","status":"Arquivado","preco":12500000.0,"atendido":"Não"},{"id":84762013,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"12/04/2026 09:47","respondido_str":"13/04/2026 16:13","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":84757484,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"12/04/2026 07:35","respondido_str":"12/04/2026 15:07","status":"Arquivado","preco":7250000.0,"atendido":"Não"},{"id":84731801,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"11/04/2026 17:10","respondido_str":"11/04/2026 17:43","status":"Arquivado","preco":11000000.0,"atendido":"Não"},{"id":84727452,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"11/04/2026 15:54","respondido_str":"13/04/2026 23:00","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84726778,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"11/04/2026 15:44","respondido_str":"13/04/2026 11:25","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":84726740,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Instagram Leads","canal":"Internet","criado_str":"11/04/2026 15:43","respondido_str":"27/04/2026 00:35","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":84722365,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"11/04/2026 14:35","respondido_str":"13/04/2026 11:23","status":"Arquivado","preco":2500000.0,"atendido":"Não"},{"id":84713578,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"11/04/2026 12:44","respondido_str":"27/04/2026 00:35","status":"Arquivado","preco":1800000.0,"atendido":"Não"},{"id":84707404,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"11/04/2026 11:26","respondido_str":"16/04/2026 10:31","status":"Arquivado","preco":6470000.0,"atendido":"Não"},{"id":84701963,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Facebook Leads","canal":"Internet","criado_str":"11/04/2026 10:05","respondido_str":"11/04/2026 14:23","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":84701102,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Grupo Zap","canal":"Internet","criado_str":"11/04/2026 09:51","respondido_str":"11/04/2026 10:21","status":"Arquivado","preco":2850000.0,"atendido":"Não"},{"id":84700023,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Telefone","canal":"Telefone","criado_str":"11/04/2026 09:32","respondido_str":"11/04/2026 10:33","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84699354,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"11/04/2026 09:21","respondido_str":"13/04/2026 17:19","status":"Arquivado","preco":3200000.0,"atendido":"Não"},{"id":84695744,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"11/04/2026 08:06","respondido_str":"11/04/2026 10:09","status":"Arquivado","preco":320000.0,"atendido":"Não"},{"id":84665964,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 18:37","respondido_str":"11/04/2026 17:44","status":"Arquivado","preco":2400000.0,"atendido":"Não"},{"id":84664809,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 18:19","respondido_str":"13/04/2026 16:03","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84658686,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 16:45","respondido_str":"10/04/2026 16:56","status":"Negócio fechado","preco":2100000.0,"atendido":"Não"},{"id":84654454,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Instagram Leads","canal":"Internet","criado_str":"10/04/2026 15:45","respondido_str":"10/04/2026 15:47","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":84652485,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 15:13","respondido_str":"13/04/2026 17:22","status":"Arquivado","preco":220000.0,"atendido":"Não"},{"id":84645069,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Telefone","canal":"Telefone","criado_str":"10/04/2026 13:31","respondido_str":"10/04/2026 13:39","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84642638,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Fernando Macedo","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 13:01","respondido_str":"11/04/2026 10:11","status":"Arquivado","preco":950000.0,"atendido":"Não"},{"id":84634668,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 10:55","respondido_str":"10/04/2026 11:27","status":"Em negociação","preco":1950000.0,"atendido":"Não"},{"id":84633140,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Instagram Leads","canal":"Internet","criado_str":"10/04/2026 10:28","respondido_str":"10/04/2026 10:29","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":84631276,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 09:53","respondido_str":"10/04/2026 13:04","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":84631006,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 09:47","respondido_str":"10/04/2026 16:06","status":"Arquivado","preco":590000.0,"atendido":"Não"},{"id":84629433,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Instagram Leads","canal":"Internet","criado_str":"10/04/2026 09:15","respondido_str":"13/04/2026 21:06","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84626512,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 07:58","respondido_str":"13/04/2026 16:57","status":"Arquivado","preco":4500000.0,"atendido":"Não"},{"id":84626094,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 07:43","respondido_str":"10/04/2026 13:05","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84625665,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"10/04/2026 07:24","respondido_str":"10/04/2026 17:50","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84619098,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 23:16","respondido_str":"10/04/2026 07:54","status":"Arquivado","preco":3000000.0,"atendido":"Não"},{"id":84615514,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 21:59","respondido_str":"10/04/2026 15:48","status":"Arquivado","preco":18000000.0,"atendido":"Não"},{"id":84610508,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 20:21","respondido_str":"13/04/2026 15:40","status":"Arquivado","preco":330000.0,"atendido":"Não"},{"id":84608474,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 19:40","respondido_str":"11/04/2026 07:34","status":"Arquivado","preco":1800000.0,"atendido":"Não"},{"id":84605268,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Fernando Macedo","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 18:36","respondido_str":"10/04/2026 07:16","status":"Arquivado","preco":950000.0,"atendido":"Não"},{"id":84603406,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 17:58","respondido_str":"25/04/2026 00:28","status":"Arquivado","preco":1800000.0,"atendido":"Não"},{"id":84596348,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Telefone","canal":"Telefone","criado_str":"09/04/2026 15:55","respondido_str":"09/04/2026 17:43","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84595064,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 15:34","respondido_str":"10/04/2026 16:10","status":"Arquivado","preco":30000000.0,"atendido":"Não"},{"id":84594520,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 15:24","respondido_str":"09/04/2026 17:08","status":"Arquivado","preco":3000000.0,"atendido":"Não"},{"id":84582049,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 13:07","respondido_str":"09/04/2026 19:52","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84581183,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Telefone","canal":"Telefone","criado_str":"09/04/2026 12:51","respondido_str":"09/04/2026 14:01","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84580178,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 12:34","respondido_str":"13/04/2026 16:04","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84578962,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 12:11","respondido_str":"09/04/2026 12:18","status":"Arquivado","preco":190000.0,"atendido":"Não"},{"id":84578555,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"09/04/2026 12:03","respondido_str":"09/04/2026 13:06","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84578416,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 12:01","respondido_str":"09/04/2026 13:18","status":"Arquivado","preco":3499000.0,"atendido":"Não"},{"id":84573600,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 10:46","respondido_str":"09/04/2026 12:40","status":"Arquivado","preco":3200000.0,"atendido":"Não"},{"id":84573502,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 10:44","respondido_str":"14/04/2026 17:26","status":"Arquivado","preco":2700000.0,"atendido":"Não"},{"id":84573187,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 10:39","respondido_str":"10/04/2026 08:03","status":"Arquivado","preco":2900000.0,"atendido":"Não"},{"id":84571613,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 10:12","respondido_str":"09/04/2026 10:17","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84567868,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 09:00","respondido_str":"09/04/2026 19:51","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84558842,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 01:05","respondido_str":"09/04/2026 17:53","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":84558717,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"09/04/2026 01:02","respondido_str":"09/04/2026 14:02","status":"Arquivado","preco":4500000.0,"atendido":"Não"},{"id":84552679,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 22:39","respondido_str":"09/04/2026 11:03","status":"Arquivado","preco":2000000.0,"atendido":"Não"},{"id":84552636,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 22:38","respondido_str":"08/04/2026 22:55","status":"Arquivado","preco":140000.0,"atendido":"Não"},{"id":84550987,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 22:10","respondido_str":"09/04/2026 14:39","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84542165,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 19:54","respondido_str":"09/04/2026 14:41","status":"Arquivado","preco":3800000.0,"atendido":"Não"},{"id":84540725,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 19:32","respondido_str":"08/04/2026 20:13","status":"Arquivado","preco":1200000.0,"atendido":"Não"},{"id":84519341,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 14:19","respondido_str":"10/04/2026 12:12","status":"Arquivado","preco":1000000.0,"atendido":"Não"},{"id":84514692,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 13:24","respondido_str":"09/04/2026 17:58","status":"Arquivado","preco":3000000.0,"atendido":"Não"},{"id":84513948,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 13:15","respondido_str":"08/04/2026 20:17","status":"Arquivado","preco":175000.0,"atendido":"Não"},{"id":84510598,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 12:32","respondido_str":"08/04/2026 13:59","status":"Arquivado","preco":2200000.0,"atendido":"Não"},{"id":84506208,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Telefone","canal":"Telefone","criado_str":"08/04/2026 11:41","respondido_str":"08/04/2026 12:52","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":84500392,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 10:43","respondido_str":"08/04/2026 11:57","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84491587,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 08:47","respondido_str":"08/04/2026 11:57","status":"Arquivado","preco":3000000.0,"atendido":"Não"},{"id":84489297,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 07:45","respondido_str":"08/04/2026 07:49","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84489272,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"08/04/2026 07:45","respondido_str":"10/04/2026 11:07","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84478761,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 22:35","respondido_str":"13/04/2026 15:17","status":"Arquivado","preco":34000000.0,"atendido":"Não"},{"id":84478555,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 22:31","respondido_str":"07/04/2026 23:25","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":84478183,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 22:25","respondido_str":"07/04/2026 22:50","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":84477710,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 22:17","respondido_str":"08/04/2026 12:00","status":"Arquivado","preco":5500000.0,"atendido":"Não"},{"id":84477050,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 22:06","respondido_str":"13/04/2026 16:04","status":"Arquivado","preco":1200000.0,"atendido":"Não"},{"id":84474007,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 21:18","respondido_str":"13/04/2026 16:51","status":"Arquivado","preco":1200000.0,"atendido":"Não"},{"id":84472177,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Fernando Macedo","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 20:52","respondido_str":"08/04/2026 09:21","status":"Arquivado","preco":950000.0,"atendido":"Não"},{"id":84461355,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 17:39","respondido_str":"08/04/2026 10:01","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84460626,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 17:25","respondido_str":"07/04/2026 17:26","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84460591,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Telefone","canal":"Telefone","criado_str":"07/04/2026 17:24","respondido_str":"08/04/2026 10:35","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84458872,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Telefone","canal":"Telefone","criado_str":"07/04/2026 16:50","respondido_str":"08/04/2026 17:08","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84452439,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Carine Mello","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 14:58","respondido_str":"23/04/2026 00:31","status":"Arquivado","preco":2700000.0,"atendido":"Não"},{"id":84449114,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 14:00","respondido_str":"07/04/2026 14:01","status":"Arquivado","preco":2400000.0,"atendido":"Não"},{"id":84448534,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 13:51","respondido_str":"07/04/2026 16:24","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84443541,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Telefone","canal":"Telefone","criado_str":"07/04/2026 12:27","respondido_str":"07/04/2026 12:30","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84435742,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 11:50","respondido_str":"07/04/2026 12:52","status":"Arquivado","preco":3300000.0,"atendido":"Não"},{"id":84434498,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 11:32","respondido_str":"07/04/2026 11:51","status":"Arquivado","preco":2300000.0,"atendido":"Não"},{"id":84431895,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 10:54","respondido_str":"07/04/2026 13:40","status":"Arquivado","preco":950000.0,"atendido":"Não"},{"id":84430538,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 10:35","respondido_str":"07/04/2026 13:35","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84424334,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"07/04/2026 08:51","respondido_str":"07/04/2026 13:32","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84417706,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"07/04/2026 00:28","respondido_str":"14/04/2026 17:27","status":"Arquivado","preco":830000.0,"atendido":"Não"},{"id":84415597,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 23:17","respondido_str":"14/04/2026 17:28","status":"Arquivado","preco":1300000.0,"atendido":"Não"},{"id":84407635,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 21:05","respondido_str":"08/04/2026 12:06","status":"Arquivado","preco":185000.0,"atendido":"Não"},{"id":84400254,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 19:17","respondido_str":"07/04/2026 09:17","status":"Arquivado","preco":2400000.0,"atendido":"Não"},{"id":84395646,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 18:02","respondido_str":"07/04/2026 09:13","status":"Arquivado","preco":4950000.0,"atendido":"Não"},{"id":84395563,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 18:01","respondido_str":"22/04/2026 00:25","status":"Arquivado","preco":2400000.0,"atendido":"Não"},{"id":84394083,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Telefone","canal":"Telefone","criado_str":"06/04/2026 17:40","respondido_str":"07/04/2026 09:05","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84392871,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 17:25","respondido_str":"08/04/2026 12:22","status":"Em negociação","preco":3500000.0,"atendido":"Não"},{"id":84391462,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Telefone","canal":"Telefone","criado_str":"06/04/2026 17:08","respondido_str":"06/04/2026 18:02","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":84389889,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Telefone","canal":"Telefone","criado_str":"06/04/2026 16:49","respondido_str":"06/04/2026 17:28","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84388501,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Placa","canal":"Telefone","criado_str":"06/04/2026 16:33","respondido_str":"06/04/2026 17:45","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84387063,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Telefone","canal":"Telefone","criado_str":"06/04/2026 16:17","respondido_str":"06/04/2026 16:18","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84385138,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"06/04/2026 15:56","respondido_str":"22/04/2026 00:26","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84371556,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 13:28","respondido_str":"06/04/2026 16:50","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":84370146,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 13:11","respondido_str":"06/04/2026 20:07","status":"Arquivado","preco":499000.0,"atendido":"Não"},{"id":84368823,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 12:54","respondido_str":"06/04/2026 16:10","status":"Arquivado","preco":250000.0,"atendido":"Não"},{"id":84368068,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Telefone","canal":"Telefone","criado_str":"06/04/2026 12:44","respondido_str":"06/04/2026 12:45","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":84366239,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Telefone","canal":"Telefone","criado_str":"06/04/2026 12:18","respondido_str":"06/04/2026 12:44","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84364292,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 11:52","respondido_str":"06/04/2026 11:58","status":"Em negociação","preco":10990000.0,"atendido":"Não"},{"id":84362357,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Aline Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 11:26","respondido_str":"06/04/2026 11:58","status":"Arquivado","preco":12500000.0,"atendido":"Não"},{"id":84358840,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 10:39","respondido_str":"06/04/2026 12:43","status":"Arquivado","preco":830000.0,"atendido":"Não"},{"id":84358549,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 10:35","respondido_str":"15/04/2026 10:41","status":"Arquivado","preco":3950000.0,"atendido":"Não"},{"id":84357986,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 10:27","respondido_str":"06/04/2026 10:41","status":"Arquivado","preco":30000000.0,"atendido":"Não"},{"id":84352279,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 09:05","respondido_str":"13/04/2026 15:12","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84351218,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 08:43","respondido_str":"06/04/2026 11:23","status":"Arquivado","preco":950000.0,"atendido":"Não"},{"id":84348801,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Fernando Macedo","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 07:29","respondido_str":"06/04/2026 09:15","status":"Arquivado","preco":950000.0,"atendido":"Não"},{"id":84347783,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 06:27","respondido_str":"07/04/2026 12:21","status":"Arquivado","preco":2700000.0,"atendido":"Não"},{"id":84346183,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"06/04/2026 02:09","respondido_str":"13/04/2026 15:31","status":"Arquivado","preco":3950000.0,"atendido":"Não"},{"id":84339477,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Grupo Zap","canal":"Internet","criado_str":"05/04/2026 22:04","respondido_str":"06/04/2026 09:07","status":"Arquivado","preco":4650000.0,"atendido":"Não"},{"id":84329980,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"05/04/2026 18:28","respondido_str":"21/04/2026 00:30","status":"Arquivado","preco":1800000.0,"atendido":"Não"},{"id":84327932,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Instagram Leads","canal":"Internet","criado_str":"05/04/2026 17:38","respondido_str":"21/04/2026 00:30","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84327398,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Facebook Leads","canal":"Internet","criado_str":"05/04/2026 17:25","respondido_str":"06/04/2026 12:37","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84324827,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"05/04/2026 16:24","respondido_str":"21/04/2026 00:30","status":"Arquivado","preco":1800000.0,"atendido":"Não"},{"id":84324269,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Instagram Leads","canal":"Internet","criado_str":"05/04/2026 16:11","respondido_str":"13/04/2026 19:10","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84324066,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Instagram Leads","canal":"Internet","criado_str":"05/04/2026 16:06","respondido_str":"05/04/2026 16:07","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":84320705,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"05/04/2026 14:46","respondido_str":"13/04/2026 16:50","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":84319972,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"05/04/2026 14:28","respondido_str":"13/04/2026 17:33","status":"Arquivado","preco":2300000.0,"atendido":"Não"},{"id":84317276,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"05/04/2026 13:20","respondido_str":"06/04/2026 10:34","status":"Arquivado","preco":17500000.0,"atendido":"Não"},{"id":84311568,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"05/04/2026 11:21","respondido_str":"06/04/2026 11:32","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84311469,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"05/04/2026 11:20","respondido_str":"06/04/2026 16:12","status":"Arquivado","preco":280000.0,"atendido":"Não"},{"id":84303010,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"05/04/2026 06:42","respondido_str":"06/04/2026 10:26","status":"Arquivado","preco":2900000.0,"atendido":"Não"},{"id":84301734,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Grupo Zap","canal":"Internet","criado_str":"05/04/2026 03:45","respondido_str":"05/04/2026 07:03","status":"Arquivado","preco":950000.0,"atendido":"Não"},{"id":84287625,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Facebook Leads","canal":"Internet","criado_str":"04/04/2026 18:45","respondido_str":"20/04/2026 00:17","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84279537,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"04/04/2026 15:34","respondido_str":"06/04/2026 16:14","status":"Arquivado","preco":3000000.0,"atendido":"Não"},{"id":84275523,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"04/04/2026 14:18","respondido_str":"06/04/2026 16:49","status":"Arquivado","preco":1500000.0,"atendido":"Não"},{"id":84273270,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Facebook Leads","canal":"Internet","criado_str":"04/04/2026 13:33","respondido_str":"14/04/2026 00:31","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84272793,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Carine Mello","fonte":"Grupo Zap","canal":"Internet","criado_str":"04/04/2026 13:22","respondido_str":"04/04/2026 13:53","status":"Arquivado","preco":320000.0,"atendido":"Não"},{"id":84266667,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Facebook Leads","canal":"Internet","criado_str":"04/04/2026 11:19","respondido_str":"04/04/2026 12:29","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84266018,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"04/04/2026 11:05","respondido_str":"04/04/2026 11:25","status":"Em negociação","preco":799000.0,"atendido":"Não"},{"id":84265834,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"04/04/2026 11:01","respondido_str":"04/04/2026 11:02","status":"Arquivado","preco":580000.0,"atendido":"Não"},{"id":84265418,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Telefone","canal":"Telefone","criado_str":"04/04/2026 10:52","respondido_str":"04/04/2026 10:54","status":"Em negociação","preco":0.0,"atendido":"Não"},{"id":84264539,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Placa","canal":"Telefone","criado_str":"04/04/2026 10:34","respondido_str":"04/04/2026 11:41","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84262496,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"04/04/2026 09:55","respondido_str":"06/04/2026 16:14","status":"Arquivado","preco":280.0,"atendido":"Não"},{"id":84262366,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"04/04/2026 09:52","respondido_str":"06/04/2026 14:53","status":"Arquivado","preco":18000000.0,"atendido":"Não"},{"id":84251708,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 23:40","respondido_str":"04/04/2026 11:26","status":"Em negociação","preco":3950000.0,"atendido":"Não"},{"id":84251142,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Carine Mello","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 23:23","respondido_str":"13/04/2026 15:08","status":"Arquivado","preco":5349000.0,"atendido":"Não"},{"id":84250142,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Paulo Telles","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 22:54","respondido_str":"04/04/2026 07:40","status":"Arquivado","preco":7000000.0,"atendido":"Não"},{"id":84248043,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 22:03","respondido_str":"06/04/2026 16:41","status":"Arquivado","preco":4500000.0,"atendido":"Não"},{"id":84247589,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 21:55","respondido_str":"04/04/2026 12:37","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":84241008,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 20:02","respondido_str":"04/04/2026 12:41","status":"Arquivado","preco":2400000.0,"atendido":"Não"},{"id":84236983,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 18:37","respondido_str":"04/04/2026 10:06","status":"Em negociação","preco":4500000.0,"atendido":"Não"},{"id":84234682,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Gabriel Medeiros","fonte":"Facebook Leads","canal":"Internet","criado_str":"03/04/2026 17:40","respondido_str":"19/04/2026 00:35","status":"Arquivado","preco":1900000.0,"atendido":"Não"},{"id":84232238,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 16:40","respondido_str":"06/04/2026 10:25","status":"Arquivado","preco":7500000.0,"atendido":"Não"},{"id":84231466,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Facebook Leads","canal":"Internet","criado_str":"03/04/2026 16:22","respondido_str":"03/04/2026 18:45","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84230858,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"03/04/2026 16:05","respondido_str":"03/04/2026 18:42","status":"Arquivado","preco":320000.0,"atendido":"Não"},{"id":84226646,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Pedro Moreira","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 14:25","respondido_str":"06/04/2026 14:38","status":"Arquivado","preco":4400000.0,"atendido":"Não"},{"id":84226040,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 14:13","respondido_str":"03/04/2026 19:32","status":"Arquivado","preco":2500000.0,"atendido":"Não"},{"id":84223303,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 13:16","respondido_str":"04/04/2026 09:40","status":"Arquivado","preco":4700000.0,"atendido":"Não"},{"id":84221648,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Facebook Leads","canal":"Internet","criado_str":"03/04/2026 12:44","respondido_str":"19/04/2026 00:35","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84221221,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Instagram Leads","canal":"Internet","criado_str":"03/04/2026 12:33","respondido_str":"03/04/2026 15:49","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84219605,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 11:54","respondido_str":"04/04/2026 12:28","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84219515,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 11:51","respondido_str":"04/04/2026 12:24","status":"Arquivado","preco":3950000.0,"atendido":"Não"},{"id":84216820,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 10:52","respondido_str":"04/04/2026 10:01","status":"Arquivado","preco":380000.0,"atendido":"Não"},{"id":84215343,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"03/04/2026 10:20","respondido_str":"04/04/2026 12:38","status":"Arquivado","preco":830000.0,"atendido":"Não"},{"id":84199119,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Indicação","canal":"Telefone","criado_str":"02/04/2026 21:21","respondido_str":"02/04/2026 21:21","status":"Arquivado","preco":18000000.0,"atendido":"Não"},{"id":84192095,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Lívia Cordeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"02/04/2026 18:34","respondido_str":"13/04/2026 16:29","status":"Em negociação","preco":18000000.0,"atendido":"Não"},{"id":84191952,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"02/04/2026 18:31","respondido_str":"03/04/2026 13:16","status":"Arquivado","preco":420000.0,"atendido":"Não"},{"id":84183709,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Site Próprio Kenlo","canal":"Internet","criado_str":"02/04/2026 16:51","respondido_str":"02/04/2026 17:48","status":"Arquivado","preco":400000.0,"atendido":"Não"},{"id":84173399,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"02/04/2026 14:26","respondido_str":"02/04/2026 17:18","status":"Em negociação","preco":2100000.0,"atendido":"Não"},{"id":84169685,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"02/04/2026 13:24","respondido_str":"02/04/2026 14:24","status":"Arquivado","preco":2100000.0,"atendido":"Não"},{"id":84161032,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Fernando Coimbra","fonte":"Grupo Zap","canal":"Internet","criado_str":"02/04/2026 10:48","respondido_str":"02/04/2026 15:56","status":"Arquivado","preco":4500000.0,"atendido":"Não"},{"id":84160712,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"02/04/2026 10:43","respondido_str":"03/04/2026 13:24","status":"Arquivado","preco":260000.0,"atendido":"Não"},{"id":84158944,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"02/04/2026 10:16","respondido_str":"02/04/2026 10:18","status":"Arquivado","preco":3000000.0,"atendido":"Não"},{"id":84145504,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 22:56","respondido_str":"13/04/2026 10:45","status":"Arquivado","preco":7500000.0,"atendido":"Não"},{"id":84140066,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 20:58","respondido_str":"02/04/2026 12:13","status":"Arquivado","preco":3500000.0,"atendido":"Não"},{"id":84137299,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 20:00","respondido_str":"02/04/2026 14:23","status":"Em negociação","preco":1000000.0,"atendido":"Não"},{"id":84136739,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Gabriel Araujo","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 19:51","respondido_str":"02/04/2026 16:55","status":"Arquivado","preco":1200000.0,"atendido":"Não"},{"id":84129851,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Jorge Brito","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 17:44","respondido_str":"01/04/2026 17:44","status":"Arquivado","preco":7600000.0,"atendido":"Não"},{"id":84122697,"equipe":"Equipe Locação","grupo":"Niterói","corretor":"Victor Sutter","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 15:35","respondido_str":"01/04/2026 15:56","status":"Arquivado","preco":2500000.0,"atendido":"Não"},{"id":84121729,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mariana Ribeiro","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 15:21","respondido_str":"02/04/2026 14:21","status":"Arquivado","preco":1000000.0,"atendido":"Não"},{"id":84119303,"equipe":"Francisco Egito Imóveis","grupo":"Niterói","corretor":"Carine Mello","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 14:47","respondido_str":"17/04/2026 00:59","status":"Arquivado","preco":2700000.0,"atendido":"Não"},{"id":84119170,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Telefone","canal":"Telefone","criado_str":"01/04/2026 14:45","respondido_str":"01/04/2026 15:12","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84111499,"equipe":"Equipe Vendas","grupo":"Niterói","corretor":"Edvaldo Reis","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 12:43","respondido_str":"01/04/2026 16:58","status":"Arquivado","preco":2800000.0,"atendido":"Não"},{"id":84110151,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 12:20","respondido_str":"03/04/2026 13:20","status":"Arquivado","preco":1950000.0,"atendido":"Não"},{"id":84107470,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Diego Pardo","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 11:36","respondido_str":"01/04/2026 12:37","status":"Em negociação","preco":4000000.0,"atendido":"Não"},{"id":84106511,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Telefone","canal":"Telefone","criado_str":"01/04/2026 11:20","respondido_str":"01/04/2026 12:03","status":"Arquivado","preco":0.0,"atendido":"Não"},{"id":84104480,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Facebook Leads","canal":"Internet","criado_str":"01/04/2026 10:44","respondido_str":"03/04/2026 13:29","status":"Arquivado","preco":210000.0,"atendido":"Não"},{"id":84099426,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Josi Alves","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 09:11","respondido_str":"01/04/2026 09:15","status":"Arquivado","preco":475000.0,"atendido":"Não"},{"id":84097477,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 08:23","respondido_str":"01/04/2026 08:47","status":"Arquivado","preco":2300000.0,"atendido":"Não"},{"id":84097383,"equipe":"Equipe Nit","grupo":"Niterói","corretor":"Andrea Favera","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 08:21","respondido_str":"02/04/2026 13:24","status":"Arquivado","preco":16700000.0,"atendido":"Não"},{"id":84096074,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Mari Siciliano","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 07:36","respondido_str":"01/04/2026 11:02","status":"Arquivado","preco":3200000.0,"atendido":"Não"},{"id":84091124,"equipe":"Equipe SG","grupo":"São Gonçalo","corretor":"Carlos Oliveira","fonte":"Grupo Zap","canal":"Internet","criado_str":"01/04/2026 00:15","respondido_str":"02/04/2026 12:14","status":"Arquivado","preco":3500000.0,"atendido":"Não"}];
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let currentTeam = 'Niterói';
+let currentTab = 'visao';
+let currentCorretor = null;
+let currentPage = 1;
+let sortKey = 'criado_str';
+let sortAsc = false;
+let filteredData = [];
+const PAGE_SIZE = 25;
+const charts = {};
+
+const PALETTE = ['#3b82f6','#f59e0b','#22d3ee','#34d399','#f87171','#a78bfa','#fb923c','#4ade80','#60a5fa','#fbbf24'];
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function fmtBRL(v) {
+  if(!v || v <= 0) return '—';
+  if(v >= 1e6) return 'R$ ' + (v/1e6).toFixed(1).replace('.',',') + 'M';
+  if(v >= 1e3) return 'R$ ' + (v/1e3).toFixed(0) + 'K';
+  return 'R$ ' + v.toFixed(0);
+}
+function count(arr, fn) { return arr.filter(fn).length; }
+function groupBy(arr, key) {
+  return arr.reduce((m,x) => { const k=x[key]; m[k]=(m[k]||[]); m[k].push(x); return m; }, {});
+}
+function statusBadge(s) {
+  const c = s==='Arquivado'?'badge-arq':s==='Em negociação'?'badge-neg':s==='Negócio fechado'?'badge-fech':'badge-novo';
+  return `<span class="badge ${c}">${s}</span>`;
+}
+function initials(name) {
+  return name.trim().split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+}
+function getFiltered() {
+  if(currentTeam==='Todos') return RAW;
+  return RAW.filter(d=>d.grupo===currentTeam);
+}
+
+// ═══════════════════════════════════════════════════
+// CHART FACTORY
+// ═══════════════════════════════════════════════════
+function makeChart(id, type, labels, datasets, opts={}) {
+  if(charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type,
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font:{size:11} } },
+        tooltip: { backgroundColor:'#1f2436', titleColor:'#e2e8f0', bodyColor:'#94a3b8', borderColor:'#2a3045', borderWidth:1 }
+      },
+      scales: type!=='pie'&&type!=='doughnut' ? {
+        x: { ticks:{color:'#64748b', font:{size:10}}, grid:{color:'rgba(42,48,69,.5)'} },
+        y: { ticks:{color:'#64748b', font:{size:10}}, grid:{color:'rgba(42,48,69,.5)'} }
+      } : undefined,
+      ...opts
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// TAB: VISÃO GERAL
+// ═══════════════════════════════════════════════════
+function renderVisao() {
+  const data = getFiltered();
+  const ativos = count(data, d=>d.status==='Em negociação');
+  const fechados = count(data, d=>d.status==='Negócio fechado');
+  const withPrice = data.filter(d=>d.preco>1000);
+  const avgPrice = withPrice.length ? withPrice.reduce((s,d)=>s+d.preco,0)/withPrice.length : 0;
+
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi blue"><div class="kpi-label">Total de Leads</div><div class="kpi-value blue">${data.length}</div><div class="kpi-sub">no período</div></div>
+    <div class="kpi amber"><div class="kpi-label">Em Negociação</div><div class="kpi-value amber">${ativos}</div><div class="kpi-sub">${(ativos/data.length*100).toFixed(0)}% do total</div></div>
+    <div class="kpi green"><div class="kpi-label">Negócios Fechados</div><div class="kpi-value green">${fechados}</div><div class="kpi-sub">conversões</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Ticket Médio</div><div class="kpi-value cyan" style="font-size:1.2rem">${fmtBRL(avgPrice)}</div><div class="kpi-sub">com valor informado</div></div>
+  `;
+
+  // Fonte
+  const fontes = groupBy(data, 'fonte');
+  makeChart('chart-fonte','bar',Object.keys(fontes),[{
+    label:'Leads',data:Object.values(fontes).map(a=>a.length),
+    backgroundColor:PALETTE,borderRadius:6
+  }]);
+
+  // Status
+  const statuses = groupBy(data, 'status');
+  makeChart('chart-status','doughnut',Object.keys(statuses),[{
+    data:Object.values(statuses).map(a=>a.length),
+    backgroundColor:['#64748b','#22d3ee','#34d399','#fbbf24'],borderWidth:2,borderColor:'#181c27'
+  }]);
+
+  // Equipe
+  const equipes = groupBy(data, 'equipe');
+  makeChart('chart-equipe','bar',Object.keys(equipes),[{
+    label:'Leads',data:Object.values(equipes).map(a=>a.length),
+    backgroundColor:currentTeam==='Niterói'?'#3b82f6':'#f59e0b',borderRadius:6
+  }],{indexAxis:'y'});
+
+  // Canal
+  const canais = groupBy(data, 'canal');
+  makeChart('chart-canal','doughnut',Object.keys(canais),[{
+    data:Object.values(canais).map(a=>a.length),
+    backgroundColor:['#3b82f6','#f59e0b'],borderWidth:2,borderColor:'#181c27'
+  }]);
+}
+
+// ═══════════════════════════════════════════════════
+// TAB: CORRETORES
+// ═══════════════════════════════════════════════════
+function renderCorretores() {
+  const data = getFiltered();
+  const groups = groupBy(data, 'corretor');
+  const sorted = Object.entries(groups).sort((a,b)=>b[1].length-a[1].length);
+  const colors = ['#3b82f6','#f59e0b','#22d3ee','#34d399','#f87171','#a78bfa','#fb923c','#4ade80','#60a5fa','#fbbf24','#f472b6','#2dd4bf'];
+
+  document.getElementById('corr-list').innerHTML = sorted.map(([name,leads],i) => `
+    <div class="corr-item ${currentCorretor===name?'selected':''}" onclick="selectCorretor('${name.replace(/'/g,"\\'")}')">
+      <div class="corr-avatar" style="background:${colors[i%colors.length]}22;color:${colors[i%colors.length]}">${initials(name)}</div>
+      <div class="corr-info">
+        <div class="corr-name">${name}</div>
+        <div class="corr-count">${leads.length} leads</div>
+      </div>
+    </div>
+  `).join('');
+
+  if(currentCorretor) renderCorrDetail(currentCorretor);
+}
+
+function selectCorretor(name) {
+  currentCorretor = name;
+  renderCorretores();
+  renderCorrDetail(name);
+}
+
+function renderCorrDetail(name) {
+  const data = getFiltered().filter(d=>d.corretor===name);
+  document.getElementById('corretor-detail').style.display='block';
+  document.getElementById('corr-detail-name').textContent = name;
+
+  const ativos = count(data, d=>d.status==='Em negociação');
+  const arq = count(data, d=>d.status==='Arquivado');
+  const withPrice = data.filter(d=>d.preco>1000);
+  const avgP = withPrice.length ? withPrice.reduce((s,d)=>s+d.preco,0)/withPrice.length : 0;
+  const maxP = withPrice.length ? Math.max(...withPrice.map(d=>d.preco)) : 0;
+
+  document.getElementById('corr-kpis').innerHTML = `
+    <div class="kpi blue"><div class="kpi-label">Leads Recebidos</div><div class="kpi-value blue">${data.length}</div></div>
+    <div class="kpi amber"><div class="kpi-label">Em Negociação</div><div class="kpi-value amber">${ativos}</div></div>
+    <div class="kpi" style="border-top:2px solid var(--muted)"><div class="kpi-label">Arquivados</div><div class="kpi-value" style="color:var(--muted)">${arq}</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Ticket Médio</div><div class="kpi-value cyan" style="font-size:1.1rem">${fmtBRL(avgP)}</div></div>
+    <div class="kpi green"><div class="kpi-label">Maior Imóvel</div><div class="kpi-value green" style="font-size:1.1rem">${fmtBRL(maxP)}</div></div>
+  `;
+
+  const fontes = groupBy(data, 'fonte');
+  makeChart('chart-corr-fonte','doughnut',Object.keys(fontes),[{
+    data:Object.values(fontes).map(a=>a.length),backgroundColor:PALETTE,borderWidth:2,borderColor:'#181c27'
+  }]);
+  const statuses = groupBy(data, 'status');
+  makeChart('chart-corr-status','doughnut',Object.keys(statuses),[{
+    data:Object.values(statuses).map(a=>a.length),
+    backgroundColor:['#64748b','#22d3ee','#34d399','#fbbf24'],borderWidth:2,borderColor:'#181c27'
+  }]);
+
+  document.getElementById('tbody-corr').innerHTML = data.map(d=>`
+    <tr>
+      <td style="font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted)">${d.id}</td>
+      <td>${d.fonte}</td>
+      <td>${d.canal}</td>
+      <td style="font-size:.75rem;color:var(--muted)">${d.criado_str}</td>
+      <td style="font-size:.75rem;color:var(--muted)">${d.respondido_str||'—'}</td>
+      <td class="price-cell">${fmtBRL(d.preco)}</td>
+      <td>${statusBadge(d.status)}</td>
+      <td><span style="color:${d.respondido_str?'var(--success)':'var(--danger)'};font-size:.8rem">${d.respondido_str?'✓':'✗'}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// TAB: PORTAIS
+// ═══════════════════════════════════════════════════
+function renderPortais() {
+  const data = getFiltered();
+  const portalColors = {
+    'Grupo Zap':'#3b82f6','Facebook Leads':'#3b5998','Instagram Leads':'#e1306c',
+    'Site Próprio Kenlo':'#22d3ee','Telefone':'#34d399','Placa':'#fbbf24','Indicação':'#a78bfa'
+  };
+  const grupos = groupBy(data, 'fonte');
+  const maxCount = Math.max(...Object.values(grupos).map(a=>a.length));
+
+  document.getElementById('portais-grid').innerHTML = Object.entries(grupos)
+    .sort((a,b)=>b[1].length-a[1].length)
+    .map(([name, leads]) => {
+      const withPrice = leads.filter(d=>d.preco>1000);
+      const avg = withPrice.length ? withPrice.reduce((s,d)=>s+d.preco,0)/withPrice.length : 0;
+      const min = withPrice.length ? Math.min(...withPrice.map(d=>d.preco)) : 0;
+      const max = withPrice.length ? Math.max(...withPrice.map(d=>d.preco)) : 0;
+      const col = portalColors[name]||'#64748b';
+      const pct = (leads.length/maxCount*100).toFixed(0);
+      return `
+        <div class="portal-card">
+          <div class="portal-name"><span class="portal-dot" style="background:${col}"></span>${name}</div>
+          <div class="portal-stats">
+            <div class="portal-stat"><span class="portal-stat-label">Total de leads</span><span class="portal-stat-value" style="color:${col}">${leads.length}</span></div>
+            <div class="portal-stat"><span class="portal-stat-label">Valor médio</span><span class="portal-stat-value">${fmtBRL(avg)}</span></div>
+            <div class="portal-stat"><span class="portal-stat-label">Mínimo</span><span class="portal-stat-value" style="color:var(--success)">${fmtBRL(min)}</span></div>
+            <div class="portal-stat"><span class="portal-stat-label">Máximo</span><span class="portal-stat-value" style="color:var(--warn)">${fmtBRL(max)}</span></div>
+          </div>
+          <div class="portal-bar-wrap"><div class="portal-bar" style="width:${pct}%;background:${col}"></div></div>
+        </div>
+      `;
+    }).join('');
+
+  const sortedPortals = Object.entries(grupos).sort((a,b)=>b[1].length-a[1].length);
+  makeChart('chart-portal-vol','bar',sortedPortals.map(e=>e[0]),[{
+    label:'Leads',
+    data:sortedPortals.map(e=>e[1].length),
+    backgroundColor:sortedPortals.map(e=>portalColors[e[0]]||'#64748b'),
+    borderRadius:6
+  }]);
+
+  const avgData = sortedPortals.map(([,leads])=>{
+    const wp=leads.filter(d=>d.preco>1000);
+    return wp.length?wp.reduce((s,d)=>s+d.preco,0)/wp.length:0;
+  });
+  makeChart('chart-portal-val','bar',sortedPortals.map(e=>e[0]),[{
+    label:'Valor Médio (R$)',
+    data:avgData,
+    backgroundColor:sortedPortals.map(e=>portalColors[e[0]]||'#64748b'),
+    borderRadius:6
+  }],{
+    scales:{
+      x:{ticks:{color:'#64748b',font:{size:10}},grid:{color:'rgba(42,48,69,.5)'}},
+      y:{ticks:{color:'#64748b',font:{size:10},callback:v=>fmtBRL(v)},grid:{color:'rgba(42,48,69,.5)'}}
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// TAB: TABELA
+// ═══════════════════════════════════════════════════
+function initTableFilters() {
+  const fontes = [...new Set(RAW.map(d=>d.fonte))].sort();
+  const sel = document.getElementById('filter-fonte');
+  fontes.forEach(f=>{ const o=document.createElement('option'); o.value=o.textContent=f; sel.appendChild(o); });
+}
+
+function filterTable() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const st = document.getElementById('filter-status').value;
+  const fo = document.getElementById('filter-fonte').value;
+  const base = getFiltered();
+  filteredData = base.filter(d => {
+    const matchQ = !q || [d.corretor,d.status,d.fonte,d.canal,d.equipe].some(v=>v.toLowerCase().includes(q));
+    const matchSt = !st || d.status===st;
+    const matchFo = !fo || d.fonte===fo;
+    return matchQ && matchSt && matchFo;
+  });
+  filteredData.sort((a,b)=>{
+    let va=a[sortKey]||'', vb=b[sortKey]||'';
+    if(sortKey==='preco') { va=+a.preco||0; vb=+b.preco||0; }
+    return sortAsc?(va>vb?1:-1):(va<vb?1:-1);
+  });
+  currentPage = 1;
+  renderTable();
+}
+
+function sortTable(key) {
+  if(sortKey===key) sortAsc=!sortAsc; else { sortKey=key; sortAsc=false; }
+  filterTable();
+}
+
+function renderTable() {
+  const start=(currentPage-1)*PAGE_SIZE, end=start+PAGE_SIZE;
+  const page=filteredData.slice(start,end);
+  document.getElementById('tbody-main').innerHTML = page.map(d=>`
+    <tr>
+      <td>${d.corretor}</td>
+      <td style="font-size:.75rem;color:var(--muted)">${d.equipe}</td>
+      <td>${d.fonte}</td>
+      <td style="font-size:.75rem">${d.canal}</td>
+      <td style="font-size:.75rem;color:var(--muted)">${d.criado_str}</td>
+      <td style="font-size:.75rem;color:var(--muted)">${d.respondido_str||'—'}</td>
+      <td class="price-cell">${fmtBRL(d.preco)}</td>
+      <td>${statusBadge(d.status)}</td>
+      <td style="text-align:center"><span style="color:${d.respondido_str?'var(--success)':'var(--danger)'}">${d.respondido_str?'✓':'✗'}</span></td>
+    </tr>
+  `).join('');
+
+  const total = filteredData.length;
+  const pages = Math.ceil(total/PAGE_SIZE);
+  document.getElementById('pag-info').textContent = `Mostrando ${start+1}–${Math.min(end,total)} de ${total} leads`;
+  let btns = `<button class="pg-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}>‹</button>`;
+  for(let p=1;p<=pages;p++) {
+    if(p===1||p===pages||Math.abs(p-currentPage)<=1) btns+=`<button class="pg-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+    else if(Math.abs(p-currentPage)===2) btns+=`<span style="color:var(--muted);padding:0 4px">…</span>`;
+  }
+  btns+=`<button class="pg-btn" onclick="goPage(${currentPage+1})" ${currentPage>=pages?'disabled':''}>›</button>`;
+  document.getElementById('pag-btns').innerHTML = btns;
+}
+
+function goPage(p) {
+  const pages=Math.ceil(filteredData.length/PAGE_SIZE);
+  if(p<1||p>pages) return;
+  currentPage=p;
+  renderTable();
+}
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+function switchTeam(team) {
+  currentTeam = team;
+  currentCorretor = null;
+  document.querySelectorAll('.team-btn').forEach(b=>b.classList.remove('active-nit','active-sg'));
+  const clicked = [...document.querySelectorAll('.team-btn')].find(b=>b.textContent.includes(team==='Todos'?'Todos':team==='Niterói'?'Niterói':'Gonçalo'));
+  if(clicked) clicked.classList.add(team==='São Gonçalo'?'active-sg':'active-nit');
+  renderCurrentTab();
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.tab')[['visao','corretores','portais','tabela'].indexOf(tab)].classList.add('active');
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  if(currentTab==='visao') renderVisao();
+  else if(currentTab==='corretores') renderCorretores();
+  else if(currentTab==='portais') renderPortais();
+  else if(currentTab==='tabela') { filteredData=getFiltered(); filterTable(); }
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+initTableFilters();
+filteredData = getFiltered();
+renderVisao();
+</script>
+</body>
+</html>
